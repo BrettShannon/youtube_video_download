@@ -1,0 +1,218 @@
+搜m3u8什么都没有
+如果搜不到m3u8文件，说明腾讯视频可能使用了其他技术来保护视频。让我提供几种替代方案：
+🔧 方案1：使用浏览器插件（最简单）
+安装视频下载插件
+1. Chrome浏览器安装：
+    * Video DownloadHelper（最推荐）
+    * Flash Video Downloader
+    * Stream Video Downloader
+2. 操作步骤：
+    * 安装插件后访问视频页面
+    * 播放视频
+    * 插件会自动检测到视频，点击下载按钮即可
+或使用IDM（Internet Download Manager）
+* 安装IDM后，播放视频时会自动弹出下载浮窗
+🔧 方案2：使用专门的下载工具
+安装you-get（成功率较高）
+bash
+# 安装you-get
+pip install you-get
+
+
+# 尝试下载
+you-get https://v.qq.com/x/cover/mzc00200lwn6df7/w4101ousmww.html
+或使用yt-dlp（功能更强大）
+bash
+# 安装yt-dlp
+pip install yt-dlp
+
+
+# 尝试下载
+yt-dlp https://v.qq.com/x/cover/mzc00200lwn6df7/w4101ousmww.html
+🔧 方案3：查找其他格式的视频文件
+在Network选项卡中尝试搜索这些关键词：
+* index.m3u8 - 有时名称不同
+* .mp4 - 直接搜索mp4文件
+* .ts - 搜索ts片段
+* video - 搜索包含video的请求
+* play - 搜索播放地址
+* vkey - 腾讯视频特有的参数
+🔧 方案4：使用这个专门的腾讯视频下载脚本
+这里是一个专门针对腾讯视频的下载脚本：
+python
+import re
+import os
+import json
+import requests
+from urllib.parse import urlparse, parse_qs
+import subprocess
+from pathlib import Path
+import sys
+
+
+class QQVideoDownloader:
+    def __init__(self):
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://v.qq.com/'
+        }
+    
+    def get_video_info(self, url):
+        """获取视频信息"""
+        try:
+            # 提取视频ID
+            parsed = urlparse(url)
+            path_parts = parsed.path.split('/')
+            
+            # 尝试多种方式提取ID
+            video_id = None
+            for part in path_parts:
+                if part.endswith('.html'):
+                    video_id = part.replace('.html', '')
+                    break
+            
+            if not video_id and len(path_parts) > 0:
+                video_id = path_parts[-1]
+            
+            print(f"视频ID: {video_id}")
+            
+            # 尝试获取视频信息API
+            info_url = f"https://vv.video.qq.com/getinfo?vids={video_id}&platform=101001&charge=0&otype=json"
+            
+            response = requests.get(info_url, headers=self.headers, timeout=10)
+            
+            if response.status_code == 200:
+                # 解析JSONP响应
+                content = response.text
+                if 'QZOutputJson=' in content:
+                    json_str = content.split('QZOutputJson=', 1)[1].rsplit(';', 1)[0]
+                    data = json.loads(json_str)
+                    
+                    if 'vl' in data:
+                        vi = data['vl']['vi'][0]
+                        title = vi['ti']  # 标题
+                        fn = vi['fn']     # 文件名
+                        fvkey = vi['fvkey']  # 密钥
+                        
+                        # 获取视频播放地址
+                        url_prefix = vi['ul']['ui'][0]['url']
+                        
+                        print(f"标题: {title}")
+                        print(f"文件: {fn}")
+                        print(f"密钥: {fvkey[:20]}...")
+                        print(f"地址前缀: {url_prefix}")
+                        
+                        # 构造完整URL
+                        video_url = f"{url_prefix}{fn}?vkey={fvkey}"
+                        
+                        return {
+                            'title': title,
+                            'url': video_url,
+                            'filename': fn
+                        }
+            
+            return None
+            
+        except Exception as e:
+            print(f"获取视频信息失败: {e}")
+            return None
+    
+    def download_video(self, url, save_path=None):
+        """下载视频"""
+        if not save_path:
+            save_path = Path.home() / 'Desktop'
+        
+        info = self.get_video_info(url)
+        if not info:
+            print("无法获取视频信息")
+            return False
+        
+        try:
+            # 清理文件名
+            title = re.sub(r'[<>:"/\\|?*]', '', info['title'])
+            filename = f"{title}.mp4"
+            filepath = save_path / filename
+            
+            print(f"开始下载: {title}")
+            print(f"保存到: {filepath}")
+            
+            # 下载视频
+            response = requests.get(info['url'], headers=self.headers, stream=True, timeout=30)
+            response.raise_for_status()
+            
+            total_size = int(response.headers.get('content-length', 0))
+            
+            with open(filepath, 'wb') as f:
+                downloaded = 0
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        
+                        if total_size > 0:
+                            percent = (downloaded / total_size) * 100
+                            if downloaded % (1024*1024) == 0:  # 每1MB更新
+                                print(f"进度: {downloaded//1024//1024}MB/{total_size//1024//1024}MB ({percent:.1f}%)")
+            
+            print(f"✅ 下载完成: {filepath}")
+            return True
+            
+        except Exception as e:
+            print(f"下载失败: {e}")
+            return False
+
+
+def main():
+    """主函数"""
+    print("="*60)
+    print("腾讯视频专用下载器")
+    print("="*60)
+    
+    # 使用你提供的链接
+    url = "https://v.qq.com/x/cover/mzc00200lwn6df7/w4101ousmww.html"
+    
+    print(f"下载链接: {url}")
+    print()
+    
+    downloader = QQVideoDownloader()
+    
+    # 先尝试获取信息
+    print("正在获取视频信息...")
+    info = downloader.get_video_info(url)
+    
+    if info:
+        print("\n找到视频信息，开始下载...")
+        downloader.download_video(url)
+    else:
+        print("\n无法直接获取视频，尝试备用方案...")
+        
+        # 备用方案：使用you-get
+        print("\n尝试使用you-get下载...")
+        try:
+            # 检查是否安装you-get
+            result = subprocess.run(['you-get', '--version'], capture_output=True, text=True)
+            if result.returncode == 0:
+                print("使用you-get下载...")
+                subprocess.run(['you-get', url])
+            else:
+                print("未安装you-get，请先安装: pip install you-get")
+        except:
+            print("you-get未安装，请先安装: pip install you-get")
+
+
+if __name__ == '__main__':
+    main()
+    input("\n按Enter键退出...")
+🔧 方案5：终极方案 - 使用专门的软件
+如果以上方法都失败，可以考虑使用专门的视频下载软件：
+1. 硕鼠(FLVCD) - 专门下载国内视频网站
+2. 维棠(VIDOWN) - 支持腾讯视频
+3. 迅雷 - 有时可以嗅探到视频
+🚀 推荐的操作顺序
+我建议你按这个顺序尝试：
+第一步（最简单）
+bash
+# 安装并运行you-get
+pip install you-get
+you-get https://v.qq.com/x/cover/mzc00200
+本回答由 AI 生成，内容仅供参考，请仔细甄别。
