@@ -4,7 +4,6 @@
 2.再进行音频和视频的合并
 '''
 
-
 '''
 1.下载视频和音频：
 '''
@@ -12,8 +11,8 @@
 import subprocess
 import os
 
-YT_DLP = r"D:\Work App\Python311\azcx\Scripts\yt-dlp.exe"
-URL = "https://www.youtube.com/watch?v=VwR6u3Od-NI"
+YT_DLP = r"D:\Work App\Python311\azcx\Scripts\yt-dlp.exe"       # yt-dlp.exe 是一个用来下载在线视频/音频的命令行工具，在 Windows 上的可执行文件版本。
+URL = "https://www.youtube.com/watch?v=VwR6u3Od-NI"             # YouTube视频的链接
 
 OUT_DIR = "video_download"
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -46,6 +45,13 @@ output_path = Path(r"C:\Users\xzz\video_download\output.mp4")
 
 # ffmpeg.exe 路径
 ffmpeg_path = Path(r"D:\work_app\ffmpeg\ffmpeg-8.0.1-essentials_build\bin\ffmpeg.exe")
+
+                '''
+                FFmpeg 是一个开源的音视频处理框架
+                ffmpeg.exe 是它在 Windows 下的可执行程序
+                几乎所有你见过的播放器、剪辑软件、直播平台，底层都用过它
+                一句话：你能想到的音视频操作，它八成都能干。
+                '''
 
 # ffmpeg 命令
 cmd = [
